@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Telegram Login Widget</title>
+  <style>
+    :root {
+      --primary: #0088cc;
+      --error: #d63031;
+      --bg: #f8f9fa;
+      --text: #212529;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+      color: var(--text);
+      background-color: var(--bg);
+    }
+    
+    .container {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    h1 {
+      color: var(--primary);
+      margin-top: 0;
+    }
+    
+    .widget-container {
+      margin: 2rem 0;
+      min-height: 50px;
+    }
+    
+    .payload {
+      background: #f1f3f5;
+      padding: 1rem;
+      border-radius: 8px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    
+    .btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .btn:hover {
+      background: #0078b4;
+    }
+    
+    .btn:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+    }
+    
+    .status {
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+    
+    .status-info {
+      background: #e7f5ff;
+    }
+    
+    .status-error {
+      background: #ffe3e3;
+      color: var(--error);
+    }
+    
+    .status-success {
+      background: #ebfbee;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Telegram Login Demo</h1>
+    
+    <div id="status" class="status status-info">
+      ℹ️ Click the Telegram button below to authorize
+    </div>
+    
+    <div class="widget-container">
+      <!-- Official Telegram Widget -->
+      <script async 
+        src="https://telegram.org/js/telegram-widget.js?22"
+        data-telegram-login="ScoringLiveBot"
+        data-size="large"
+        data-request-access="write"
+        data-origin="https://telegram-payload.netlify.app"
+        data-onauth="onTelegramAuth(user)">
+      </script>
+    </div>
+    
+    <h3>Authorization Payload</h3>
+    <div id="payload" class="payload">Waiting for Telegram response...</div>
+    
+    <button id="copy" class="btn" disabled>Copy Payload</button>
+  </div>
+
+  <script>
+    // DOM Elements
+    const statusEl = document.getElementById('status');
+    const payloadEl = document.getElementById('payload');
+    const copyBtn = document.getElementById('copy');
+    
+    // State
+    let authData = null;
+    let widgetLoaded = false;
+
+    // Telegram Auth Callback (Official API)
+    function onTelegramAuth(user) {
+      authData = user;
+      payloadEl.textContent = JSON.stringify(user, null, 2);
+      
+      statusEl.className = 'status status-success';
+      statusEl.innerHTML = `
+        ✓ Login successful! 
+        <small>User ID: ${user.id}</small>
+      `;
+      
+      copyBtn.disabled = false;
+    }
+    window.onTelegramAuth = onTelegramAuth;
+
+    // Widget Load Events
+    window.addEventListener('telegram-widget-load', () => {
+      widgetLoaded = true;
+      statusEl.className = 'status status-info';
+      statusEl.textContent = '✔ Widget loaded - Ready for authentication';
+    });
+
+    window.addEventListener('telegram-widget-load-error', (e) => {
+      statusEl.className = 'status status-error';
+      statusEl.innerHTML = `
+        ✗ Widget failed to load: ${e.detail.error}<br><br>
+        <small>Ensure:<br>
+        - Correct bot username (@ScoringLiveBot)<br>
+        - Domain set in BotFather (telegram-payload.netlify.app)<br>
+        - No browser extensions blocking Telegram</small>
+      `;
+    });
+
+    // Copy Functionality
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(authData, null, 2));
+        statusEl.className = 'status status-success';
+        statusEl.textContent = '✓ Payload copied to clipboard!';
+      } catch (err) {
+        statusEl.className = 'status status-error';
+        statusEl.textContent = '✗ Failed to copy. Please select and copy manually.';
+      }
+    });
+
+    // Fallback check if widget doesn't fire events
+    setTimeout(() => {
+      if (!widgetLoaded && !authData) {
+        statusEl.className = 'status status-error';
+        statusEl.innerHTML = `
+          ✗ Widget not loaded after 5 seconds<br><br>
+          <small>Common fixes:<br>
+          1. Double-check domain in BotFather<br>
+          2. Try disabling ad blockers<br>
+          3. Test in incognito mode</small>
+        `;
+      }
+    }, 5000);
+  </script>
+</body>
+</html>
